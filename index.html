@@ -114,7 +114,7 @@
             <li>Выберите ваше приложение</li>
             <li>Выберите Webhooks...</li>
             <li>Нажмите 🌕 Enable Webhooks</li>
-            <li>Введите URL вашего сервера: <code>https://your-domain.com/webhook</code></li>
+            <li>Введите URL вашего сервера: <code id="webhook-url">http://localhost:8000/webhook</code></li>
         </ol>
         
         <h2>Последние вебхуки</h2>
@@ -125,6 +125,12 @@
     </div>
 
     <script>
+        // Получаем базовый URL сервера
+        const baseUrl = window.location.origin;
+        
+        // Обновляем URL в инструкции
+        document.getElementById('webhook-url').textContent = baseUrl + '/webhook';
+        
         // Функция для проверки статуса сервера
         async function checkServerStatus() {
             const statusElement = document.querySelector('#server-status .status');
@@ -190,4 +196,4 @@
         window.addEventListener('load', checkServerStatus);
     </script>
 </body>
-</html>
+</html> 
