@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CryptoBot Webhook Server</title>
+    <title>CryptoBot Webhook Logger</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -30,34 +30,12 @@
             color: #3498db;
             margin-top: 30px;
         }
-        code {
-            background-color: #f8f8f8;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-family: monospace;
-            border: 1px solid #ddd;
-        }
         pre {
             background-color: #f8f8f8;
             padding: 15px;
             border-radius: 5px;
             overflow-x: auto;
             border: 1px solid #ddd;
-        }
-        .endpoint {
-            background-color: #e8f4fc;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            border-left: 4px solid #3498db;
-        }
-        .method {
-            font-weight: bold;
-            color: #e74c3c;
-        }
-        .url {
-            font-weight: bold;
-            color: #2980b9;
         }
         .status {
             display: inline-block;
@@ -94,11 +72,26 @@
         button:hover {
             background-color: #2980b9;
         }
+        .webhook-log {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        .webhook-log h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .webhook-log pre {
+            max-height: 300px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>CryptoBot Webhook Server</h1>
+        <h1>CryptoBot Webhook Logger</h1>
         
         <div id="server-status">
             Статус сервера: <span class="status offline">Проверка...</span>
@@ -107,53 +100,9 @@
         
         <h2>О сервере</h2>
         <p>
-            Этот сервер предназначен для обработки вебхуков от CryptoBot API и интеграции с Telegram ботом.
-            Сервер обрабатывает уведомления о платежах и обновляет баланс пользователей в боте.
+            Этот сервер предназначен для приема и логирования вебхуков от CryptoBot API.
+            Все полученные вебхуки сохраняются в логах и могут быть просмотрены ниже.
         </p>
-        
-        <h2>Доступные эндпоинты</h2>
-        
-        <div class="endpoint">
-            <p><span class="method">POST</span> <span class="url">/webhook</span></p>
-            <p>Эндпоинт для получения вебхуков от CryptoBot API.</p>
-            <p>Требуется заголовок <code>Crypto-Pay-API-Signature</code> для проверки подписи.</p>
-        </div>
-        
-        <div class="endpoint">
-            <p><span class="method">POST</span> <span class="url">/create-invoice/{user_id}/{amount}</span></p>
-            <p>Создает новый инвойс для пользователя.</p>
-            <p>Параметры:</p>
-            <ul>
-                <li><code>user_id</code> - ID пользователя в Telegram</li>
-                <li><code>amount</code> - Сумма инвойса</li>
-                <li><code>asset</code> - Валюта (по умолчанию USDT)</li>
-            </ul>
-        </div>
-        
-        <div class="endpoint">
-            <p><span class="method">GET</span> <span class="url">/invoices</span></p>
-            <p>Получает список всех инвойсов.</p>
-            <p>Параметры:</p>
-            <ul>
-                <li><code>limit</code> - Лимит записей (по умолчанию 100)</li>
-                <li><code>offset</code> - Смещение (по умолчанию 0)</li>
-            </ul>
-        </div>
-        
-        <div class="endpoint">
-            <p><span class="method">GET</span> <span class="url">/webhooks</span></p>
-            <p>Получает список всех полученных вебхуков.</p>
-            <p>Параметры:</p>
-            <ul>
-                <li><code>limit</code> - Лимит записей (по умолчанию 100)</li>
-                <li><code>offset</code> - Смещение (по умолчанию 0)</li>
-            </ul>
-        </div>
-        
-        <div class="endpoint">
-            <p><span class="method">GET</span> <span class="url">/health</span></p>
-            <p>Проверка работоспособности сервера.</p>
-        </div>
         
         <h2>Настройка вебхуков в CryptoBot</h2>
         <p>
@@ -168,20 +117,11 @@
             <li>Введите URL вашего сервера: <code>https://your-domain.com/webhook</code></li>
         </ol>
         
-        <h2>Пример запроса для создания инвойса</h2>
-        <pre>
-curl -X POST "https://your-domain.com/create-invoice/123456789/10.5" \
-     -H "Content-Type: application/json"
-        </pre>
-        
-        <h2>Пример ответа</h2>
-        <pre>
-{
-  "status": "success",
-  "invoice_id": "12345",
-  "bot_invoice_url": "https://t.me/CryptoBot?start=invoice_12345"
-}
-        </pre>
+        <h2>Последние вебхуки</h2>
+        <button onclick="loadWebhookLogs()">Загрузить последние вебхуки</button>
+        <div id="webhook-logs">
+            <p>Нажмите кнопку выше, чтобы загрузить последние вебхуки.</p>
+        </div>
     </div>
 
     <script>
@@ -208,8 +148,46 @@ curl -X POST "https://your-domain.com/create-invoice/123456789/10.5" \
             }
         }
         
+        // Функция для загрузки логов вебхуков
+        async function loadWebhookLogs() {
+            const logsContainer = document.getElementById('webhook-logs');
+            logsContainer.innerHTML = '<p>Загрузка вебхуков...</p>';
+            
+            try {
+                const response = await fetch('/logs');
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.logs && data.logs.length > 0) {
+                        logsContainer.innerHTML = '';
+                        
+                        data.logs.forEach(log => {
+                            const logElement = document.createElement('div');
+                            logElement.className = 'webhook-log';
+                            
+                            const timestamp = log.timestamp.replace('_', ' ').replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
+                            
+                            logElement.innerHTML = `
+                                <h3>Вебхук от ${timestamp}</h3>
+                                <pre>${JSON.stringify(log.data, null, 2)}</pre>
+                            `;
+                            
+                            logsContainer.appendChild(logElement);
+                        });
+                    } else {
+                        logsContainer.innerHTML = '<p>Вебхуки не найдены.</p>';
+                    }
+                } else {
+                    logsContainer.innerHTML = '<p>Ошибка при загрузке вебхуков.</p>';
+                }
+            } catch (error) {
+                logsContainer.innerHTML = `<p>Ошибка при загрузке вебхуков: ${error.message}</p>`;
+                console.error('Ошибка при загрузке вебхуков:', error);
+            }
+        }
+        
         // Проверяем статус при загрузке страницы
         window.addEventListener('load', checkServerStatus);
     </script>
 </body>
-</html> 
+</html>
